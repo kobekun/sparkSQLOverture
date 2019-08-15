@@ -1,0 +1,85 @@
+
+spark2.1.0
+
+
+    默认支持scala版本2.11.8
+    如果需要改成2.10，需要显式的指定
+    ./dev/change-scala-version.sh 2.10
+
+    前置要求：
+    1）Building Spark using Maven requires Maven 3.3.9 or newer and Java 7+
+    2）export MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=512m"
+spark2.4.3
+    Building Spark using Maven requires Maven 3.5.4 and Java 8.
+    Note that support for Java 7 was removed as of Spark 2.2.0.
+
+maven编译命令：
+    ./build/mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.4.0 -DskipTests clean package
+
+ P ==> profile
+
+ <properties>
+     <hadoop.version>2.2.0</hadoop.version>
+     <protobuf.version>2.5.0</protobuf.version>
+     <yarn.version>${hadoop.version}</yarn.version>
+ </properties>
+
+ <profile>
+   <id>hadoop-2.6</id>
+   <properties>
+     <hadoop.version>2.6.4</hadoop.version>
+     <jets3t.version>0.9.3</jets3t.version>
+     <zookeeper.version>3.4.6</zookeeper.version>
+     <curator.version>2.6.0</curator.version>
+   </properties>
+ </profile>
+
+ ./build/mvn -Pyarn -Phadoop-2.6 -Phive -Phive-thriftserver -Dhadoop.version=2.6.0-cdh5.7.0 -DskipTests clean package
+
+ 推荐使用
+ ./dev/make-distribution.sh --name 2.6.0-cdh5.7.0 --tgz -Pyarn -Phadoop-2.6 -Phive -Phive-thriftserver -Dhadoop.version=2.6.0-cdh5.7.0
+
+ ./dev/make-distribution.sh \
+ --name 2.6.0-cdh5.7.0 \
+ --tgz \
+ -Pyarn -Phadoop-2.6 \
+ -Phive -Phive-thriftserver \
+ -Dhadoop.version=2.6.0-cdh5.7.0
+
+
+ 编译完成后：
+ spark-$version-bin-$name.tgz
+ spark-2.1.0-bin-2.6.0-cdh5.7.0.tgz
+
+  hdfs和yarn版本不同的情况  (hdfs版本有点老，不支持某个特性，又不敢对hadoop版本进行升级，
+  这时候可以对hdfs版本进行升级)
+ #Different versions of HDFS and YARN.
+ ./build/mvn -Pyarn -Phadoop-2.3 -Dhadoop.version=2.3.0 -Dyarn.version=2.2.0 -DskipTests clean package
+
+
+坑：
+    默认maven中央仓库中下载不了了，将下面的仓库添加到pom.xml中
+    <repository>
+        <id>cloudera</id>
+        <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+    </repository>
+
+
+如果在编译后，一些异常信息看不太懂，在编译命令后加上 -X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
