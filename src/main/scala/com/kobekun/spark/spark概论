@@ -1,0 +1,51 @@
+﻿
+
+bin: 与客户端相关
+sbin: 与服务相关的一些东西
+
+
+spark standalone模式环境搭建：
+
+spark standalone模式架构和hadoop hdfs和yarn类似  1 master + n worker
+
+spark-env.sh  -->
+        SPARK_MASTER_HOST=hadoop001
+        SPARK_WORKER_CORES=2
+        SPARK_WORKER_MEMORY=2g
+        SPARK_WORKER_INSTANCES=2
+
+
+        hadoop1 : master
+        hadoop2 : worker
+        hadoop3 : worker
+        hadoop4 : worker
+        ...
+        hadoop10 : worker
+
+        slaves:
+        hadoop2
+        hadoop3
+        hadoop4
+        ...
+        hadoop10
+
+        ==> start-all.sh 会在hadoop1机器上启动master进程，在slaves文件配置的所有hostname
+        机器上启动worker进程
+
+
+        spark作业：http://hadoop001:4040
+        Spark master at spark://hadoop001:7077
+        master UI：http://hadoop001:8080
+
+        如果 ./bin/spark-shell --master local[2] 启动失败，检查mysql驱动包是否放在
+        jars目录下
+
+local模式：  spark-shell --master local[2]
+standalone模式：spark-shell --master spark://hadoop001:7077
+
+
+
+
+
+
+
