@@ -1,0 +1,80 @@
+
+
+sparkSQL的前世是  shark ==> hive on spark
+
+shark终止以后，产生两个分支：
+    1) hive on spark
+        hive社区，源码在hive中
+    2) spark SQL
+        spark社区，源码在spark社区中
+
+
+
+SQL on hadoop
+    1) hive
+        SQL ==> mapreduce
+        metastore : 元数据
+        SQL ：database、table、view
+        facebook开源
+    2) impala
+        cloudera : cdh (建议在生产上使用的hadoop系列版本，因为它解决了很多版本之间的依赖关系)、
+        cm(界面搭建hadoop框架)
+        SQL：自己的守护进程执行的，非MR
+    3) presto
+        facebook 开源
+        京东
+        SQL
+    4) drill
+        sql
+        访问：hdfs、rdbms、json、hbase、mangodb、s3、hive
+    5) spark SQL
+        SQL
+        dataframe、DataSet api
+        metastore
+        访问：hdfs、rdbms、json、hbase、mangodb、s3、hive、外部数据源
+
+
+  Spark SQL is a Spark module for structured data processing
+
+  sparkSQL 不仅有访问或者操作SQL的功能，还提供了非常丰富的操作：外部数据源、优化
+
+  sparkSQL概述：
+    1) spark SQL的应用不局限于SQL
+    2) 访问hive、json、parquet等文件的数据
+    3) sql只是sparkSQL的一个功能
+    ==> sparksql名字起的并不恰当
+    4) sparkSQL提供了SQL的API和dataframe、DataSet的API
+
+
+    sparkSQL愿景：
+        1) write less code
+        2) read less code
+        3) let the optimizer do the hard work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
