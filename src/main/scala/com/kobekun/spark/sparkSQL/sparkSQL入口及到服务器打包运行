@@ -1,0 +1,29 @@
+
+
+spark1.x  sql  入口点：sqlcontext
+
+    val sc: SparkContext
+    val sqlContxt: new org.apache.spark.sql.SQLContext(sc)
+
+
+./bin/spark-submit \
+  --class <main-class> \
+  --master <master-url> \
+  --deploy-mode <deploy-mode> \
+  --conf <key>=<value> \
+  ... # other options
+  <application-jar> \
+  [application-arguments]
+
+  ./bin/spark-submit \
+    --class com.kobekun.spark.sparkSQL.SQLContextApp \
+    --master local[2] \
+    --name SQLContextApp \
+    /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT.jar \
+    /home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/src/main/resources/people.json
+
+
+
+
+
+
