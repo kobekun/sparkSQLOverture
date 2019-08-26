@@ -1,0 +1,34 @@
+
+
+A DataFrame is a Dataset organized into named columns.  (RDD with schema)
+以列(列名、列的类型、列值)的形式构成的数据集，按照列赋予不同的名称
+概念上可以理解为关系型数据库上的一张表
+
+A Dataset is a distributed collection of data.  分布式数据集
+
+
+DF 对比RDD
+
+    RDD
+        java/scala ==> jvm
+        python ==> python runtime
+    DataFrame
+        java/scala/python ==> logic plan
+
+  DataFrame和RDD的互操作的两种方式：
+    1) 反射 case class   前提：事先知道字段、字段类型
+    2) 编程 Row  第一种不能满足要求(事先不知道列(知道列的类型))
+    3) 选型：优先选择第一种
+
+
+
+
+
+
+
+
+
+
+
+
+
