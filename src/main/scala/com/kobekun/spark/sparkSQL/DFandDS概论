@@ -20,6 +20,19 @@ DF 对比RDD
     2) 编程 Row  第一种不能满足要求(事先不知道列(知道列的类型))
     3) 选型：优先选择第一种
 
+    静态类型和运行时类型的安全问题
+    DataFrame = DataSet[Row]
+    DataSet --> 强类型
+    DataFrame --> 弱类型
+    SQL --> 更弱
+
+    SQL ： spark.sql("seletc * from person").show    --> compile ok, execute no
+    DF : df.seletc("name")  --> compile no,  提前暴露报错
+         df.select("nname") --> compile ok
+    DataSet : ds.map(line => line.itemid)  ---> compile no   itemid应为itemId
+
+
+
 
 
 
