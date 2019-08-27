@@ -1,0 +1,55 @@
+
+
+用户：
+    方便快速从不同数据源(json、parquet、rdbms)，经过混合处理，再将
+    处理结果以特定的方式(json、parquet)，写回到指定的系统(hdfs、s3)上去
+
+
+    sparkSQL 1.2 ===> 外部数据源API
+
+
+外部数据源目的：
+    1) 开发人员：是否需要把代码合并到spark中
+
+    2) 用户
+        读：spark.read.format(format)
+            format  --> build-in: json parquet mysql csv(spark 2+)
+                        packages: 外部的 并不是spark内置的  https://spark-packages.org
+
+        写：people.write.format("parquet").save("path")
+
+
+    //如果是json文件会抛出以下错误
+        //java.lang.RuntimeException: file:/home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0
+        // /examples/src/main/resources/people.json is not a Parquet file
+        spark.read.load(jsonPath).show
+
+        // This is used to set the default data source
+          val DEFAULT_DATA_SOURCE_NAME = SQLConfigBuilder("spark.sql.sources.default")
+            .doc("The default data source to use in input/output.")
+            .stringConf
+            .createWithDefault("parquet")
+
+    spark-sql处理parquet文件
+
+      CREATE TEMPORARY VIEW parquetTable
+      USING org.apache.spark.sql.parquet
+      OPTIONS (
+        path "/home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/src/main/resources/users.parquet"
+      )
+
+      SELECT * FROM parquetTable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
