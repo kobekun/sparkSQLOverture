@@ -41,7 +41,7 @@ object AccessLogConvertUtil {
       val traffic = splits(2).toLong
       val ip = splits(3)
 
-      val city = ""
+      val city = IPUtils.getCity(ip)
       val time = splits(0)
       val day = time.substring(0,10).replaceAll("-","")
 
