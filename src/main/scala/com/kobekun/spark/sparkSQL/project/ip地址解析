@@ -1,0 +1,21 @@
+
+
+
+使用github上已有的开源项目
+1）git clone https://github.com/wzhe06/ipdatabase.git
+2）编译下载的项目：mvn clean package -DskipTests
+3）安装jar包到自己的maven仓库
+mvn install:install-file -Dfile=F:\\BaiduNetdiskDownload\\ipdatabase-master\\target\\ipdatabase-1.0-SNAPSHOT.jar -DgroupId=com.ggstar -DartifactId=ipdatabase -Dversion=1.0 -Dpackaging=jar
+
+
+
+
+
+
+
+
+
+
+
+
+
