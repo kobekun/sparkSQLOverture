@@ -26,15 +26,11 @@ object MysqlUtils {
     * 释放数据库资源
     * @param conn
     * @param pstmt
-    * @param rs
     */
-  def releaseResource(conn: Connection, pstmt: PreparedStatement, rs: ResultSet) = {
+  def releaseResource(conn: Connection, pstmt: PreparedStatement) = {
     try{
       if(pstmt != null){
         pstmt.close()
-      }
-      if(rs != null){
-        rs.close()
       }
 
     }catch {
@@ -70,9 +66,33 @@ object MysqlUtils {
 
 //解决方案：pom.xml文件中mysql版本升高到和本机安装的版本一致
 
+//报错解决方案：set global time_zone='+8:00';
+//The server time zone value 'ÖÐ¹ú±ê×¼Ê±¼ä' is unrecognized or represents
+//more than one time zone. You must configure either the server or JDBC driver
+//(via the serverTimezone configuration property) to use a more specifc time zone value
+//if you want to utilize time zone support.
+
 //create table day_video_access_topn_stat(
 //  day varchar(10) not null,
 //  cms_id bigint(10) not null,
 //  times bigint(10) not null,
 //  primary key(day,cms_id)
+//) ;
+
+
+
+//create table day_city_video_access_topn_stat(
+//day varchar(10) not null,
+//city varchar(50) not null,
+//cms_id bigint(10) not null,
+//times bigint(10) not null,
+//times_rank int not null,
+//primary key(day,city,cms_id)
+//) ;
+
+//create table day_traffic_video_access_topn_stat(
+//day varchar(10) not null,
+//cms_id bigint(10) not null,
+//traffics bigint(10) not null,
+//primary key(day,cms_id)
 //) ;
