@@ -1,0 +1,66 @@
+
+
+spark中支持4种运行模式：
+    1) local: 开发时使用
+    2) StandAlone:
+        spark自带，如果一个是该模式的话，那么就需要在多台机器上同时部署spark环境
+    3) yarn 生产上使用，统一使用yarn进行集群作业(MR、spark、MapReduce)
+    4) mesos
+
+
+    不管使用什么模式，spark应用程序的代码是一样的，只需要在提交的时候通过 --master参数
+    指定运行模式
+	
+yarn的两种模式对比：
+ client模式
+    driver运行在client中(提交spark作业是机器)
+    client会和请求到的container进行通信来完成作业的调度和执行，client不能退出
+    日志信息在控制台输出：便于测试
+ cluster模式
+    driver运行在applicationmaster中
+    client只要提交完作业，就可以关掉，因为作业已经在yarn上运行
+    日志在控制台看不到，因为日志在Driver上，只能通过yarn logs -applicationId application_id
+
+    applicationmaster的职责：申请资源，作业调度
+
+
+export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
+
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master yarn \
+  --deploy-mode cluster \  # can be client for client mode
+  --executor-memory 20G \
+  --num-executors 50 \
+  /home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/jars/spark-examples_2.11-2.1.0.jar \
+  4
+
+Exception in thread "main" java.lang.Exception: When running with
+master 'yarn' either HADOOP_CONF_DIR or YARN_CONF_DIR must be set in the environment.
+
+如果运行在yarn上，那么必须要设置HADOOP_CONF_DIR or YARN_CONF_DIR
+
+ 1) export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
+ 2) $SPARK_HOME/conf/spark-env.sh
+
+  此处的yarn就是yarn client模式
+  如果是yarn cluster模式的话，yarn-cluster
+
+
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master yarn-cluster \
+  --deploy-mode cluster \  # can be client for client mode
+  --executor-memory 20G \
+  --num-executors 50 \
+  /home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/jars/spark-examples_2.11-2.1.0.jar \
+  4
+
+
+
+
+
+
+
+
+
