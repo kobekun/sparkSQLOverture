@@ -1,0 +1,70 @@
+
+
+打包时要注意，pom.xml中需要添加如下plugin
+<plugin>
+    <artifactId>maven-assembly-plugin</artifactId>
+    <configuration>
+        <archive>
+            <manifest>
+                <mainClass></mainClass>
+            </manifest>
+        </archive>
+        <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+        </descriptorRefs>
+    </configuration>
+</plugin>
+
+mvn assembly:assembly
+
+export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
+
+./bin/spark-submit \
+  --class com.kobekun.spark.sparkSQL.project.SparkStatCleanJobYarn \
+  --master yarn \
+  --deploy-mode cluster \  # can be client for client mode
+  --executor-memory 20G \
+  --num-executors 50 \
+  /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  hdfs://192.168.137.10:8020/imooc/input/* hdfs://192.168.137.10:8020/imooc/clean
+  
+  
+如遇报错，搞成一行执行
+./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.SparkStatCleanJobYarn --master yarn --deploy-mode cluster --executor-memory 10G --num-executors 25 \
+  /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  hdfs://192.168.137.10:8020/imooc/input/* hdfs://192.168.137.10:8020/imooc/clean
+  
+  
+  http://192.168.137.10:8088/可以进入yarn界面看日志报错信息
+  
+
+./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.SparkStatCleanJobYarn --master yarn --deploy-mode cluster --executor-memory 10G --num-executors 25 \
+--files /home/hadoop/lib/ipDatabase.csv,/home/hadoop/lib/ipRegion.xlsx \
+ /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  hdfs://192.168.137.10:8020/imooc/input/* hdfs://192.168.137.10:8020/imooc/clean
+
+--files 在spark中的使用
+测试时使用
+spark.read.format("parquet").load("/imooc/clean/day=20170511/part-00000-71d465d1-7338-4016-8d1a-729504a9f95e.snappy.parquet").show(false)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
