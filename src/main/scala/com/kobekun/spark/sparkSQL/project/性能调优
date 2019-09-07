@@ -1,0 +1,62 @@
+
+
+存储格式的选择：
+    列存储  sparkSQL直接指定 orc parquet
+
+压缩方式：
+    压缩速度
+    压缩文件的可分割性  大文件  分割成小文件
+
+    使用压缩的优点-->   1、节省数据占用的磁盘空间
+                       2、加快数据在磁盘和网络中的传输速度
+
+    压缩格式        扩展名
+    GZIP            .gzp
+    ZIP             .zip
+    BZIP2           .bz2    --> 支持分割  多task并行执行
+    LZO             .lzo
+
+    bzip2 压缩效果好，但是压缩速度慢，支持分割
+    gzip  没bzip2压缩效果好，但是压缩解压速度快，不支持分割
+    lzo   压缩效果不如前两个，但是压缩解压速度最快
+
+    sparkSQL默认parquet存储格式   snappy压缩方式 文件名 xxx.snappy.parquet
+    spark.sql.parquet.compression.codec	snappy
+    可以在sparksession中通过
+    .config("spark.sql.parquet.compression.codec","gzip")设置成gzip的压缩方式
+    文件名 xxx.gzip.parquet
+
+
+代码优化：
+
+    1、选择高性能的算子
+    df.foreachPartition
+    2、复用已有的代码
+
+
+参数优化：
+
+    1、spark.sql.shuffle.partitions  默认200
+
+    export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
+
+    调整并行度
+    ./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.TopNStatJobYarn --master yarn --deploy-mode cluster --executor-memory 1G --num-executors 1 \
+     --conf spark.sql.shuffle.partitions=100 \
+     /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
+      hdfs://192.168.137.10:8020/imooc/clean/  20170511
+
+    通过在yarn界面(8088)上可以看到shuffle并行度为100
+
+    2、分区字段类型推测
+    .config("spark.sql.sources.partitionColumnTypeInference.enabled","false")
+
+    false  --> 所有字段都是string类型
+
+
+
+
+
+
+
+
