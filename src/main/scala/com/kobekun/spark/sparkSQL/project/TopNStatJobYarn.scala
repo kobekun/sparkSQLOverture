@@ -1,0 +1,185 @@
+package com.kobekun.spark.sparkSQL.project
+
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SparkSession}
+
+import scala.collection.mutable.ListBuffer
+
+object TopNStatJobYarn {
+
+  def main(args: Array[String]): Unit = {
+
+    if(args.length != 2){
+      println("Usage: TopNStatJobYarn <inputPath> <day>")
+    }
+    val Array(inputPath,day) = args
+
+    val spark = SparkSession.builder()
+      //.appName("TopNStatJob")
+      .config("spark.sql.sources.partitionColumnTypeInference.enabled","false")
+      //.master("local[2]")
+      .getOrCreate()
+
+    val para = Array(args(0),args(1))
+
+
+    val accessDF = spark.read.format("parquet")
+      .load(inputPath)
+
+//    accessDF.printSchema()
+//    accessDF.show(false)
+
+    StatDao.deleteData(day)
+
+    //按照天统计视频的TopN访问量
+    videoAccessTopNStat(spark,accessDF,day)
+
+    //按照地市统计视频的TopN访问量
+    cityAccessTopNStat(spark,accessDF,day)
+
+    //按照流量进行统计
+    trafficAccessTopNStat(spark,accessDF,day)
+
+    spark.stop()
+  }
+
+  def trafficAccessTopNStat(spark: SparkSession, accessDF: DataFrame, day: String) = {
+
+    import spark.implicits._
+
+    val trafficAccessTopNDS = accessDF.filter($"day" === day && $"cmsType" === "video")
+      .groupBy("day","cmsId")
+      .agg(sum("traffic").as("traffics"))
+      .orderBy("traffics")
+
+        trafficAccessTopNDS.printSchema()
+        trafficAccessTopNDS.show(false)
+
+    try{
+
+      trafficAccessTopNDS.foreachPartition(partitionOfRecord =>{
+
+        val list = new ListBuffer[DayTrafficVideoAccessStat]
+
+        partitionOfRecord.foreach(info => {
+
+          val day =  info.getAs[String]("day")
+          val cmsId = info.getAs[Long]("cmsId")
+          val traffics = info.getAs[Long]("traffics")
+
+          list.append(DayTrafficVideoAccessStat(day,cmsId,traffics))
+        })
+
+        StatDao.insertDayTrafficVideoAccessTopNStat(list)
+      })
+    }catch {
+      case e: Exception => e.printStackTrace()
+    }
+  }
+
+
+  def videoAccessTopNStat(spark: SparkSession, accessDF: DataFrame, day: String) = {
+
+    /**
+      * 按照dataframe的方式进行统计
+      */
+        import spark.implicits._
+
+        val videoAccessTopNDF = accessDF.filter($"day" === day && $"cmsType" === "video")
+          .groupBy("day","cmsId")
+          .agg(count("cmsId").as("times"))
+          .orderBy($"times".desc)
+
+//        videoAccessTopNDF.show(false)
+
+    /**
+      * 按照sparkSQL的方式进行统计
+      */
+//    accessDF.createOrReplaceTempView("access_log")
+//
+//    val videoAccessTopNDF = spark.sql("select day,cmsId,count(1) as times from access_log" +
+//      " where day='20170511' and cmstype='video'" +
+//      " group by day,cmsId" +
+//      " order by times desc")
+//
+//    videoAccessTopNDF.show(false)
+
+    /**
+      * 将统计结果写入到mysql数据库
+      *
+      */
+    try{
+
+      videoAccessTopNDF.foreachPartition(partitionOfRecord =>{
+
+        val list = new ListBuffer[DayVideoAccessStat]
+
+        partitionOfRecord.foreach(info => {
+
+          val day =  info.getAs[String]("day")
+          val cmsId = info.getAs[Long]("cmsId")
+          val times = info.getAs[Long]("times")
+
+          list.append(DayVideoAccessStat(day,cmsId,times))
+        })
+
+        StatDao.insertDayVideoAccessTopNStat(list)
+      })
+    }catch {
+      case e: Exception => e.printStackTrace()
+    }
+
+  }
+
+
+  def cityAccessTopNStat(spark: SparkSession, accessDF: DataFrame, day: String) = {
+
+    /**
+      * 按照dataframe的方式进行统计
+      */
+    import spark.implicits._
+
+    val cityAccessTopNDS = accessDF.filter($"day" === day && $"cmsType" === "video")
+      .groupBy("day","city","cmsId")
+      .agg(count("cmsId").as("times"))
+
+//    cityAccessTopNDS.printSchema()
+//    cityAccessTopNDS.show(false)
+
+    //Window函数在sparkSQL中的应用
+    val cityVideoAccessStatDF = cityAccessTopNDS.select(
+      cityAccessTopNDS("day"),
+      cityAccessTopNDS("city"),
+      cityAccessTopNDS("cmsId"),
+      cityAccessTopNDS("times"),
+      row_number().over(Window.partitionBy(cityAccessTopNDS("city"))
+        .orderBy(cityAccessTopNDS("times").desc))
+        .as("timesRank")
+    ).filter("timesRank <= 3")  //top3
+//          .show(false)
+
+    try{
+
+      cityVideoAccessStatDF.foreachPartition(partitionOfRecord =>{
+
+        val list = new ListBuffer[DayCityVideoAccessStat]
+
+        partitionOfRecord.foreach(info => {
+
+          val day =  info.getAs[String]("day")
+          val city = info.getAs[String]("city")
+          val cmsId = info.getAs[Long]("cmsId")
+          val times = info.getAs[Long]("times")
+          val timesRank = info.getAs[Int]("timesRank")
+
+          list.append(DayCityVideoAccessStat(day,city,cmsId,times,timesRank))
+        })
+
+        StatDao.insertDayCityVideoAccessTopNStat(list)
+      })
+    }catch {
+      case e: Exception => e.printStackTrace()
+    }
+  }
+}
