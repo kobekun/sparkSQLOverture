@@ -37,18 +37,22 @@ export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
   
   http://192.168.137.10:8088/可以进入yarn界面看日志报错信息
   
+export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
 
-./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.SparkStatCleanJobYarn --master yarn --deploy-mode cluster --executor-memory 10G --num-executors 25 \
+//注意内存和线程数的设置
+./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.SparkStatCleanJobYarn --master yarn --deploy-mode cluster --executor-memory 1G --num-executors 1 \
 --files /home/hadoop/lib/ipDatabase.csv,/home/hadoop/lib/ipRegion.xlsx \
  /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
   hdfs://192.168.137.10:8020/imooc/input/* hdfs://192.168.137.10:8020/imooc/clean
 
 --files 在spark中的使用
 测试时使用
-spark.read.format("parquet").load("/imooc/clean/day=20170511/part-00000-71d465d1-7338-4016-8d1a-729504a9f95e.snappy.parquet").show(false)
+spark.read.format("parquet").load("hdfs://192.168.137.10/imooc/clean/day=20170511/part-00000-45a5611c-0334-4c64-b6ae-14aa19184616.snappy.parquet").show(false)
 
-
-
+export HADOOP_CONF_DIR=/home/hadoop/app/hadoop-2.6.0-cdh5.7.0/etc/hadoop
+./bin/spark-submit --class com.kobekun.spark.sparkSQL.project.TopNStatJobYarn --master yarn --deploy-mode cluster --executor-memory 1G --num-executors 1 \
+ /home/hadoop/lib/sparkSQLOverture-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  hdfs://192.168.137.10:8020/imooc/clean/  20170511
 
 
 
