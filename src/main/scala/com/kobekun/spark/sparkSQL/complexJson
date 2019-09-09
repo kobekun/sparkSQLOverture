@@ -1,0 +1,69 @@
+
+
+
+val path = "/home/hadoop/data/test.json"
+val test = spark.read.format("json").load(path)
+test.show
++--------+----------------+
+|    name|            nums|
++--------+----------------+
+|zhangsan| [1, 2, 3, 4, 5]|
+|    lisi|[6, 7, 8, 9, 10]|
++--------+----------------+
+test.createOrReplaceTempView("json_test")
+
+spark.sql("select name,nums[1] from json_test").show
++--------+-------+
+|    name|nums[1]|
++--------+-------+
+|zhangsan|      2|
+|    lisi|      7|
++--------+-------+
+
+spark.sql("select name,explode(nums) from json_test").show
++--------+---+
+|    name|col|
++--------+---+
+|zhangsan|  1|
+|zhangsan|  2|
+|zhangsan|  3|
+|zhangsan|  4|
+|zhangsan|  5|
+|    lisi|  6|
+|    lisi|  7|
+|    lisi|  8|
+|    lisi|  9|
+|    lisi| 10|
++--------+---+
+
+
+val path = "/home/hadoop/data/test2.json"
+val test = spark.read.format("json").load(path)
+
+test.show
++-----------------+-------+
+|          address|   name|
++-----------------+-------+
+|  [Columbus,Ohio]|    Yin|
+|[null,California]|Michael|
++-----------------+-------+
+test.createOrReplaceTempView("json_test2")
+spark.sql("select name,address.city,address.state from json_test2").show
+
++-------+--------+----------+
+|   name|    city|     state|
++-------+--------+----------+
+|    Yin|Columbus|      Ohio|
+|Michael|    null|California|
++-------+--------+----------+
+
+
+sql function coverage
+    1、SQL 2003 support
+    2、runs all 99 of TPS-DS benchmark queries
+    3、subquery supports 子查询
+    4、vectorization 支持向量化(之前一行一行的读，现在可以读多行)
+
+sparkSQL外部数据源：https://spark-packages.org
+
+
