@@ -1,0 +1,39 @@
+
+1、DF = RDD + schema
+2、DF is just a type alias for DataSet of Row  --Databricks
+3、DF over RDD: catalyst optimization&schemas
+4、DF can handle: Text、json、parquet and more
+5、DF中的SQL或者API最后都会被catalyst优化
+
+很多字段都是在运行的时候才知道是什么数据类型
+
+1、Create an RDD of Rows from the original RDD;
+2、Create the schema represented by a StructType matching the structure of Rows in the RDD created in Step 1.
+3、Apply the schema to the RDD of Rows via createDataFrame method provided by SparkSession.
+
+
+val schemaString = "line"
+
+//在spark-shell中运行换行时注意
+val fields = schemaString.split(" ").map(field =>
+    StructField(fieldName,StringType,nullable=true))
+val schema = StructType(fields)
+
+val masterDF = spark.createDataFrame(masterRDD,schema)
+masterDF.show
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
