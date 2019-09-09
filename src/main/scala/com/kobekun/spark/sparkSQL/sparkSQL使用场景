@@ -1,0 +1,85 @@
+
+
+sparkSQL使用场景
+
+1、数据的即席查询  对比普通查询(按照一定的标准，比如where、groupby)
+    用户在使用过程中，可以根据自己的需求，用户自己定义的
+    想查询哪个字段就查询哪个
+2、在streaming data上的现有SQL的分析
+
+3、通过SQL进行ETL操作
+
+4、和外部数据源互操作
+
+5、在大集群上成规模的查询性能显著
+
+sparkSQL加载数据
+
+import org.apache.spark.sql.Row
+val masterRDD = masterLog.map(x => Row(x))
+
+import org.apache.spark.sql.types._
+val schemaString = "line"
+
+//在spark-shell中运行换行时注意
+val fields = schemaString.split(" ").map(field =>
+    StructField(fieldName,StringType,nullable=true))
+val schema = StructType(fields)
+
+val masterDF = spark.createDataFrame(masterRDD,schema)
+masterDF.show
+
+masterDF.createOrReplaceTempView("master_logs")
+spark.sql("select * from master_logs limit 10").show(false)
+
+val path="/home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/src/main/resources/users.parquet"
+val userDF = spark.read.format("parquet").load(path)
+userDF.printSchema
+userDF.show
+
+userDF.createOrReplaceTempView("user_info")
+spark.sql("select * from user_info where name='Ben'").show(false)
+
+spark.sql("select * from parquet.`/home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/src/main/resources/users.parquet`").show
+spark.sql("select * from parquet.`path`").show
+
+
+val hdfsRDD = sc.textFile("hdfs://path/file")
+val s3RDD = sc.textFile("s3a://bucket/object")
+    s3a/s3n
+
+sparkSQL保存数据
+
+SaveMode.ErrorIfExists  (default) 可以不用写
+SaveMode.Append
+SaveMode.Overwrite
+SaveMode.Ignore   有就忽略，没有就创建。 相当于create table if not exists
+
+val path = "/home/hadoop/app/spark-2.1.0-bin-2.6.0-cdh5.7.0/examples/src/main/resources/people.json"
+val df = spark.read.format("json").load(path)
+df.show
+
+df.select("name").write.format("parquet").mode("overwrite").save("file:///home/hadoop/data/overwrite")
+spark.read.format("parquet").load("file:///home/hadoop/data/overwrite/part-00000-32eb1eb9-466d-4e52-afc4-e9bbaf154bd1.snappy.parquet").show
+或者
+spark.read.format("parquet").load("file:///home/hadoop/data/overwrite").show
+
+df.select("name").write.format("parquet").mode("append").save("file:///home/hadoop/data/overwrite")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
