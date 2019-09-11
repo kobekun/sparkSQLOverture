@@ -1,0 +1,35 @@
+
+
+spark升级：
+
+  部署包升级：
+    1、下载对应的需要的spark源码包
+    2、解压源码包
+    3、编译
+    4、解压安装包到~/app/
+    5、配置环境变量SPARK_HOME
+
+注：1、spark on yarn,只需要在提交的机器上部署编译后的spark安装包即可
+    2、spark on standalone, spark集群中的每个机器都需要部署编译后的spark安装包
+  代码包升级：
+    1、升级所需要的spark对应的版本
+        <spark.version>2.4.2</spark.version>
+
+    2、在dependency中修改SQL和streaming依赖的spark版本
+
+方法：
+coalesce --> 为RDD减少分区的数据
+
+repartition --> 增加分区 (数据清洗会用到)
+def repartition(numPartitions: Int)(implicit ord: Ordering[T] = null): RDD[T] = withScope {
+    coalesce(numPartitions, shuffle = true)
+  }
+
+
+  HINT: Hive早期，mapJoin  /*+ a*/
+
+
+
+
+
+
