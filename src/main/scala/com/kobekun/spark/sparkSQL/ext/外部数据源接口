@@ -1,0 +1,63 @@
+
+
+abstract class BaseRelation: 定义schema信息，产生 RDD[Row]
+
+JDBCRelation
+
+trait RelationProvider : 创建baserelation
+
+
+scan: TableScan PrunedScan PrunedFilteredScan
+
+InsertableRelation 插入数据
+
+SELECT * FROM $table WHERE 1=0 当只想要得到表结构而不想要数据的时候会这样写，因为0=1永远是false
+
+
+private[sql] case class JDBCRelation(
+    parts: Array[Partition], jdbcOptions: JDBCOptions)(@transient val sparkSession: SparkSession)
+  extends BaseRelation
+  with PrunedFilteredScan
+  with InsertableRelation {
+
+  override def sqlContext: SQLContext = sparkSession.sqlContext
+
+  override val needConversion: Boolean = false
+
+  override val schema: StructType = JDBCRDD.resolveTable(jdbcOptions)
+
+  // Check if JDBCRDD.compileFilter can accept input filters
+  override def unhandledFilters(filters: Array[Filter]): Array[Filter] = {
+    filters.filter(JDBCRDD.compileFilter(_, JdbcDialects.get(jdbcOptions.url)).isEmpty)
+  }
+
+  override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+    // Rely on a type erasure hack to pass RDD[InternalRow] back as RDD[Row]
+    JDBCRDD.scanTable(
+      sparkSession.sparkContext,
+      schema,
+      requiredColumns,
+      filters,
+      parts,
+      jdbcOptions).asInstanceOf[RDD[Row]]
+  }
+
+  override def insert(data: DataFrame, overwrite: Boolean): Unit = {
+    val url = jdbcOptions.url
+    val table = jdbcOptions.table
+    val properties = jdbcOptions.asProperties
+    data.write
+      .mode(if (overwrite) SaveMode.Overwrite else SaveMode.Append)
+      .jdbc(url, table, properties)
+  }
+
+  override def toString: String = {
+    val partitioningInfo = if (parts.nonEmpty) s" [numPartitions=${parts.length}]" else ""
+    // credentials should not be included in the plan output, table information is sufficient.
+    s"JDBCRelation(${jdbcOptions.table})" + partitioningInfo
+  }
+}
+
+
+
+
