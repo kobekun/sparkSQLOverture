@@ -1,0 +1,54 @@
+
+
+常见的SQL分类：
+	select ... from xxx where yy=zzz    生产中一般不会出现问题
+	join N表的连接   有shuffle的地方就会产生数据倾斜  会出现问题
+	group by		 有shuffle的地方就会产生数据倾斜  会出现问题
+	
+	
+	
+	
+普通的select  用的是窄依赖  通过函数分区数不变 一对一
+
+宽依赖 分区数变化   多对一
+
+注意事项：输入的文件大小
+
+一个文件对应一个task  不同的blocksize相对于文件大小要体现
+
+
+
+
+groupby	
+
+select 
+	product,count(1) 
+from 
+	orders 
+where 
+	day='20190913' 
+group by 
+	product;
+
+想象下面的图
+input => map => combine => reduce
+
+会按照groupby的条件走shuffle
+
+hash(key)% partitions    得到的值相同，都落到同一个task上  一个task并不只有一个key，只要符合此条件都在一个task上
+
+
+join
+
+select 
+	e.empno,e.ename,d.deptno,d.dname 
+from	
+	emp e join dept d
+on e.deptno = d.deptno;
+
+普通join，按照join的条件走shuffle，如果key在一块的话会产生数据倾斜
+
+
+
+
+
