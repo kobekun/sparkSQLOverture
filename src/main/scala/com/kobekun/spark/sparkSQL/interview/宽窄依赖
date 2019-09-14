@@ -1,0 +1,66 @@
+
+请聊一下sparkRDD的宽窄依赖
+
+    窄依赖 ---> 父RDD和子RDD的partition关系是一对一或者多对一，不会产生shuffle
+
+        指父RDD的每个分区只被一个子RDD分区使用
+        父RDD和子RDD的partition之间的关系是一对一，或者父RDD一个partition只对应子一个RDD的
+        partition的情况下，父rdd和子rdd的partition关系是多对一。
+        不会有shuffle的产生。父RDD的一个分区去到子RDD的一个分区。
+
+    宽依赖
+        父RDD与子RDD partition的partition关系是一对多，会产生shuffle。
+
+    区分宽窄依赖主要就是看父RDD的一个partition的流向，要是流向是一个就是窄依赖，流向是两个的话，
+    就是宽依赖
+
+    stage概念
+        stage是由一组并行的task组成。
+        划分stage的依据就是RDD之间的宽窄依赖。遇到宽依赖，就划分一个stage，每个stage包含一个或多个
+        task。task的数量由对key的hash与分区数取模得到的值决定
+
+    stage计算模式
+        pipeline管道计算模式  见图stage管道计算模式.png
+        1、spark的pipeline计算模式，相当于执行一个高级函数f3(f2(f1(textFile))) !+!+!=3
+        也就是来一条数据然后计算一条数据，把所有的逻辑走完，然后落地，
+        准确的说一个task处理遗传分区的数据 因为跨过了不同的逻辑的分区。
+        而MapReduce是1+1=2,2+1=3的模式，也就是计算完落地，然后再计算，再落地到磁盘或者内存，最后
+        落在计算节点上，按reduce的hash分区落地。因为spark完全基于内存计算，所以这也是比MapReduce快的
+        原因
+        2、管道中的数据何时落地：shuffle write的时候，对RDD进行持久化的时候
+        3、stage的task并行度由stage的最后一个rdd的分区数决定。一般来说，一个partition对应一个task
+        但最后reduce的时候，可以手动改变reduce的个数，也就是分区数，即改变了并行度。比如reduceByKey(XXX,3),
+        GroupByKey(4)，union由的分区数由前面的相加。
+        4、如何提高stage的并行度：reduceBykey(xxx,numpartiotion),join(xxx,numpartiotion)
+
+     宽窄依赖的比较
+        1、宽依赖往往对应着shuffle操作，需要在运行的过程中将同一个RDD分区传入到不同的rdd分区中，
+        中间可能涉及到多个节点之间数据的传输，而窄依赖的每个父RDD分区只会传入到另一个子RDD分区，
+        通常在一个节点完成
+        2、当RDD分区丢失时，对于窄依赖来说，由于父rdd的一个分区只对应一个子rdd分区，这样需要重新
+        计算与子rdd分区对应的父rdd分区就行。这个计算对数据的利用是100%的
+        3、当rdd分区丢失时，对于宽依赖，重算的父rdd分区只有一部分数据对应子rdd分区的，另一部分造成多余的
+        计算，宽依赖中的子rdd分区通常来自多个父rdd。字段情况下，所有父rdd分区都有可能重新计算
+
+     窄依赖函数
+        map,filter,union,join(父rdd是hash-partitioned)，mapPartitions,mapValues
+     宽依赖函数
+        groupByKey，reduceByKey，partitionBy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
