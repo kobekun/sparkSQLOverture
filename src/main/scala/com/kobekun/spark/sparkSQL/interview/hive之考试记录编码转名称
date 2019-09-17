@@ -1,0 +1,222 @@
+
+
+业务场景：考试记录编码转名称
+
+    要求一：答案选项表只能关联一次
+    要求二：答案顺序不能错位，没有被选择项，置空
+
+    ----------------------------------------------
+    考试记录表
+    -----------------------------------------------
+    考试人     试卷名称        题目编号        答案编码
+    张三       exam-a         0101            ACD
+    ------------------------------------------------
+	1、创建考试记录表，并加载数据
+	***********************************************************************************
+    create table exam_record(
+    student String,
+    paper string,
+    topicid string,
+    answerid string
+    )row format delimited fields terminated by ',';
+	
+	load data local inpath '/home/hadoop/data/考试记录.txt' into table exam_record;
+	
+	***********************************************************************************
+    insert into exam_record values('zhangsan','exam-a','0101','ACD');
+    -------------------------------------------------------------------
+    答案选项表
+    -------------------------------------------------------------------
+    试卷名称        考试编号        题目名称        答案          名称
+    -------------------------------------------------------------------
+    exam-a          0101          您最近五年的     A             教师
+                                  职业(可多选)
+
+    exam-a          0101          您最近五年的     B             医生
+                                      职业(可多选)
+
+    exam-a          0101          您最近五年的     C             销售人员
+                                      职业(可多选)
+
+    exam-a          0101          您最近五年的     D             白领
+                                      职业(可多选)
+    --------------------------------------------------------------------
+	2、创建答案表，并加载数据
+	******************************************************************************************
+    create table answer_record(
+    papername string,
+    topicid string,
+    topicname string,
+    answersingleid string,
+    answername string
+    )row format delimited fields terminated by ',';
+
+	load data local inpath '/home/hadoop/data/答案.txt' into table answer_record;
+	
+	******************************************************************************************
+    insert into answer_record values('exam-a','0101','您最近五年的职业(可多选)','A','教师');
+    insert into answer_record values('exam-a','0101','您最近五年的职业(可多选)','B','医生');
+    insert into answer_record values('exam-a','0101','您最近五年的职业(可多选)','C','销售人员');
+    insert into answer_record values('exam-a','0101','您最近五年的职业(可多选)','D','白领');
+	
+
+
+    请用hive实现将考试记录表的编码，转换成对应的题目名称及答案名称，关联后结果如下：
+
+    ------------------------------------------------------------------------------------------
+    考试人     试卷名称        题目编号        题目名称        答案A     答案B     答案C     答案D
+    ------------------------------------------------------------------------------------------
+    张三          exam-a      0101          您最近五年的      教师      null      销售人员   白领
+                                            职业(可多选)
+    ------------------------------------------------------------------------------------------
+
+
+	******************************************************************************************************************
+	3、使用split将字符串分开，用explode将其炸开，lateral view explode 进行列转行   将转换后的数据存放在一个表exam_record_transform中
+		select a.topicid,a.paper,b.single from exam_record a lateral view explode(split(answerid,'')) b as single;
+		
+		create table exam_record_transform as select a.student,a.paper,a.topicid,b.single as single 
+		from exam_record a lateral view explode(split(answerid,'')) b as single;
+		
+	*******************************************************************************************************************	
+	
+hive> select a.student,a.paper,a.topicid,b.single as single from exam_record a lateral view explode(split(answerid,'')) b as single;
+OK
+0101    exam-a
+0101    exam-a  A
+0101    exam-a  C
+0101    exam-a  D
+0101    exam-a
+Time taken: 0.241 seconds, Fetched: 5 row(s)
+
+hive> select * from answer_record;
+OK
+exam-a  0101    您最近五年的职业(可多选)        A       教师
+exam-a  0101    您最近五年的职业(可多选)        B       医生
+exam-a  0101    您最近五年的职业(可多选)        C       销售人员
+exam-a  0101    您最近五年的职业(可多选)        D       白领
+Time taken: 1.629 seconds, Fetched: 4 row(s)
+
+update answer_record set answersingleid='B' where answername='医生';
+update answer_record set answersingleid='C' where answername='销售人员';
+update answer_record set answersingleid='D' where answername='白领';
+ 
+ 
+
+
+select a.student,a.paper,a.topicid,b.topicname,b.answersingleid,b.answername from answer_record b left join exam_record_transform a 
+on b.topicid=a.topicid and b.answersingleid=a.single;
+
+truncate table result;
+insert into result select a.student,a.paper,a.topicid,b.topicname,b.answersingleid,b.answername from answer_record b left join exam_record_transform a 
+on b.topicid=a.topicid and b.answersingleid=a.single;
+
+OK
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        A       教师
+NULL    NULL    NULL    您最近五年的职业(可多选)        B       医生
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        C       销售人员
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        D       白领
+Time taken: 32.382 seconds, Fetched: 4 row(s)
+
+select a.student,a.paper,a.topicid,b.topicname,b.answersingleid,b.answername from answer_record b  join exam_record_transform a 
+on b.topicid=a.topicid and b.answersingleid=a.single;
+
+OK
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        A       教师
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        C       销售人员
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        D       白领
+
+--------------------------------------------------
+样例
+select productid
+      ,concat_ws('',collect_set(fuwu))     `服务`
+      ,concat_ws('',collect_set(weizhi))   `位置`
+      ,concat_ws('',collect_set(sheshi))   `设施`
+      ,concat_ws('',collect_set(weisheng)) `卫生`
+from
+  (  select productid
+           ,case when tagtype='位置' then highlight else '' end as  weizhi
+           ,case when tagtype='服务' then highlight else '' end as  fuwu 
+           ,case when tagtype='卫生' then highlight else '' end as  weisheng
+           ,case when tagtype='设施' then highlight else '' end as  sheshi
+      from dw_htl.tmp_dianpingt
+   ) a 
+ group by productid
+-------------------------------------------------------
+
+************************************************************************************************************************************************************
+4、通过和答案表关联，选中符合条件的数据，并将数据放到结果表中
+create table result as select a.student,a.paper,a.topicid,b.topicname,b.answersingleid,b.answername from answer_record b  join exam_record_transform a 
+on b.topicid=a.topicid and b.answersingleid=a.single;
+
+****************************************************************************************************************************
+
+truncate table result;
+insert into result select a.student,a.paper,a.topicid,b.topicname,b.answersingleid,b.answername from answer_record b  join exam_record_transform a 
+on b.topicid=a.topicid and b.answersingleid=a.single;
+ 
+select student,paper,topicid,topicname
+,concat_ws('',collect_set(daanA))  `答案A`
+,concat_ws('',collect_set(daanB))   `答案B`
+,concat_ws('',collect_set(daanC))   `答案C`
+,concat_ws('',collect_set(daanD))  `答案D`
+from (select student,paper,topicid,topicname,
+case when answername='教师' and student is not null then answersingleid else null end as daanA,
+case when answername='医生' and student is not null then answersingleid else null end as daanB,
+case when answername='销售人员' and student is not null then answersingleid else null end as daanC,
+case when answername='白领' and student is not null then answersingleid else null end as daanD
+from result) a
+group by student,paper,topicid,topicname;
+
+
+***********************************************
+5、设置显示字段名
+
+在hive中如下设置，显示字段名
+set hive.cli.print.header=true;
+
+***************************************************
+
+
+**************************************************************************************
+6、通过 case when  concat_ws和 collect_set 进行 行转列
+
+select student `考试人`,paper `试卷名称`,topicid `题目编号`,topicname `题目名称`
+,concat_ws('',collect_set(daanA))  `答案A`
+,concat_ws('',collect_set(daanB))   `答案B`
+,concat_ws('',collect_set(daanC))   `答案C`
+,concat_ws('',collect_set(daanD))  `答案D`
+from (select student,paper,topicid,topicname,
+case when answersingleid='A'  then answername else null end as daanA,
+case when answersingleid='B' then answername else null end as daanB,
+case when answersingleid='C' then answername else null end as daanC,
+case when answersingleid='D' then answername else null end as daanD
+from result) a
+group by student,paper,topicid,topicname;
+
+OK
+试人  试卷名称        题目编号        题目名称        答案a   答案b   答案c   答案d
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        教师            销售人员        白领
+Time taken: 39.68 seconds, Fetched: 1 row(s)
+********************************************************************************
+
+select student `考试人`,paper `试卷名称`,topicid `题目编号`,topicname `题目名称`
+,collect_set(daanA)  `答案A`
+,collect_set(daanB)   `答案B`
+,collect_set(daanC)   `答案C`
+,collect_set(daanD)  `答案D`
+from (select student,paper,topicid,topicname,
+case when answersingleid='A'  then answername else null end as daanA,
+case when answersingleid='B' then answername else null end as daanB,
+case when answersingleid='C' then answername else null end as daanC,
+case when answersingleid='D' then answername else null end as daanD
+from result) a
+group by student,paper,topicid,topicname;
+
+OK
+考试人  试卷名称        题目编号        题目名称        答案a   答案b   答案c   答案d
+zhangsan        exam-a  0101    您最近五年的职业(可多选)        ["教师"]        []      ["销售人员"]    ["白领"]
+Time taken: 39.68 seconds, Fetched: 1 row(s)
+
+
+
