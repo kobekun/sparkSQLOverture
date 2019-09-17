@@ -1,0 +1,60 @@
+
+
+有collect_list和collect_set函数
+    他们都是将分组中的某列转为一个数组返回，不同的是collect_list不去重，
+    collect_set去重
+
+    create table t_visit_video(
+    username String,
+    video_name String
+    )partitioned by (day String)
+    row format delimited fields terminated by ',';
+
+	visit.data
+	张三,大唐双龙传
+	李四,天下无贼
+	张三,神探狄仁杰
+	李四,霸王别姬
+	李四,霸王别姬
+	王五,机器人总动员
+	王五,放牛班的春天
+	王五,盗梦空间
+load data local inpath '/home/hadoop/data/visit.data' into table
+t_visit_video partition (day='20180808');
+
+hive> load data local inpath '/home/hadoop/data/visit.data' into table
+    > t_visit_video partition (day='20180808');
+Loading data to table default.t_visit_video partition (day=20180808)
+Failed with exception MetaException(message:For direct MetaStore DB connections, we don't support retries at the client level.)
+FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.MoveTask
+
+报上面的错，注意：
+1、mysql安装包的版本是否和驱动包的版本匹配
+2、在mysql中执行以下命令： 
+　　drop database hive; 
+　　create database hive; 
+　　alter database hive character set latin1;需要注意hive-site.xml中将重启hive时的数据库改成hive，然后再重启hive
+
+visit.data文件编码格式必须是utf8格式，否则看上去会乱码
+
+
+select username, collect_list(video_name) from t_visit_video group by username ;
+张三    ["大唐双龙传","神探狄仁杰"]
+李四    ["天下无贼","霸王别姬","霸王别姬"]
+王五    ["机器人总动员","放牛班的春天","盗梦空间"]
+
+select username, collect_set(video_name) from t_visit_video group by username;
+张三    ["大唐双龙传","神探狄仁杰"]
+李四    ["天下无贼","霸王别姬"]
+王五    ["机器人总动员","放牛班的春天","盗梦空间"]
+
+
+select username, collect_list(video_name)[0] from t_visit_video group by username;
+张三    大唐双龙传
+李四    天下无贼
+王五    机器人总动员
+
+
+https://www.cnblogs.com/wwxbi/p/6102380.html
+
+
