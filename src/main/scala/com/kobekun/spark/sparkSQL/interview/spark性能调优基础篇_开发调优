@@ -1,0 +1,200 @@
+
+基础篇，分开发调优和资源调优
+
+开发调优：
+
+    原则1、避免创建重复的RDD
+
+        多个RDD通过不同的算子操作(比如map，reduce)串起来，就是RDD串，即RDD lineage，
+        ，就是RDD的血缘关系链
+
+        对于同一份数据，只应创建一个RDD，不能创建多个RDD来代表同一份数据
+
+        例子：
+
+        错误做法--->
+            val rdd1 = sc.textFile("hdfs://192.168.0.1:9000/hello.txt")
+            rdd1.map(...)
+
+            val rdd2 = sc.textFile("hdfs://192.168.0.1:9000/hello.txt")
+            rdd2.map(..)
+
+        正确做法---> 多次算子操作，只使用一个rdd
+            val rdd1 = sc.textFile("hdfs://192.168.0.1:9000/hello.txt")
+            rdd1.map(...)
+            rdd2.map(...)
+
+    原则2、尽可能复用同一个RDD
+
+        如果一个RDD的数据格式是key-value类型的，另一个是单value类型的，这两个rdd的
+        value数据是完全一样的。那么此时只用key-value类型的那个rdd，因为其中已经包含了
+        另一个数据，对于类似这种多个RDD数据有重叠或者包含的情况，应尽量复用一个rdd，这样
+        可以减少rdd的数量，从而减少算子执行的次数。
+
+        例子：
+            错误做法 --->
+            val rdd1 = ...
+            val rdd2 = rdd1.map(..)
+
+            rdd1.reduceByKey(..)
+            rdd2.map(...)
+
+            正确做法 ---> 此种做法，相较上面错误做法，明显减少了一次rdd2的开销
+            val rdd1 = ...
+            rdd1.reduceByKey(...)
+            rdd1.map(tuple._2...)
+
+    原则3、对多次使用rdd进行持久化
+
+        spark对于一个rdd执行多次算子操作的默认原理是：
+
+        每次对一个rdd执行算子操作时，都会重新从源头出重新计算一遍，计算出那个rdd来，然后
+        再对这个rdd执行算子操作。。。 此时，对多次使用的rdd进行持久化
+
+        例子：
+
+        val rdd1 = sc.textFile("hdfs://192.168.0.1:9000/hello.txt").cache()
+        rdd1.map(..)
+        rdd1.reduce(..)
+
+        val rdd1 = sc.textFile("hdfs://192.168.0.1:9000/hello.txt")
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+        rdd1.map(..)
+        rdd1.reduce(..)
+
+    原则4、尽量避免使用shuffle类算子
+
+        shuffle过程，简单说，就是将分布在集群中多个节点上的同一个key，拉取到同一个节点
+        上，进行聚合或者join等操作，比如reduceByKey、join都会触发shuffle操作。
+
+        shuffle过程中，各个节点上相同的key都会先写入到本地磁盘文件中(磁盘的IO操作)，
+        然后将不同节点的key拉取到相同的节点上进行聚合操作(网络传输)，还有可能因为一个节点
+        上的key过多，导致内存放不下，而写入到磁盘中。
+        此过程中发生的磁盘io操作以及数据的网络传输操作，都是严重影响shuffle性能
+
+        能避免尽量避免使用shuffle类算子reduceByKey、join、distinct、repartition等
+        ，尽量使用非shuffle类算子。大大减少性能开销
+
+        broadcast和map进行join代码示例
+
+           //传统的join操作，会导致shuffle操作
+           //相同的key都需要通过网络拉取到一个节点上，由一个task进行join操作。
+           1) val rdd3 = rdd1.join(rdd2)
+
+            //broadcast+map的join不会导致shuffle
+           2)   val rdd2Data = rdd2.collect()
+                //用broadcast将数据量较少的rdd作为广播变量，此处建议rdd2Data数据量较少
+                //几百兆或者1,2G,因为每个Executor的内存中，都会驻留一份rdd2的全量数据。
+                val rdd2DataBroadcast = sc.broadcast(rdd2Data)
+                val rdd3 = rdd1.map(rdd2DataBroadcast...)
+
+
+    原则5、使用map-side预聚合的shuffle操作
+
+        如果无法避免使用shuffle操作，无法用map类的算子来替代，尽量使用map-side预聚合的算子
+
+        map-side预聚合：在每个节点本地对相同的key进行一次聚合操作，类似于MapReduce中的本地
+        combiner。
+        map-side之后，每个节点本地只有一条相同的key。其他节点在拉取所有节点上的相同key时，
+        就会大大减少需要拉取的数据量，从而减少磁盘io以及网络传输开销
+
+        可能的话，建议用reduceByKey或者aggregateByKey算子代替groupByKey。因为reduceByKey或者aggregateByKey
+        都会使用用户自定义的函数对每个节点本地相同key进行预聚合。而groupByKey算子不会进行预聚合
+        全量数据在集群的各个节点之间分发和传输，性能很差
+
+        见词频统计groupByKey原理图.png和词频统计reduceByKey原理图.png
+
+    原则6、使用高性能的算子
+
+        1) 使用reduceByKey/aggregateByKey替代groupByKey
+        2) 使用mapPartitions替代普通map
+         mapPartitions,一次函数调用会处理一个partition所有的数据，而不是一次处理一条。
+         性能相对来说高一些。但是有时候，用该算子会出现oom问题。因为一次处理一个partition
+         所有的数据，如果内存不够的话，垃圾回收是无法回收掉太多对象，可能出现oom异常。慎用
+
+        3) 用foreachPartitions代替foreach
+        原理类似2)，一次函数调用处理一个partition的所有数据
+
+        比如在foreach函数中，将rdd中所有的数据写到mysql中，普通foreach会将数据一条一条的写
+        每次函数调用就会创建一个数据库连接，此时势必频繁的创建和销毁数据库连接，性能很低；如果
+        用foreachPartitions算子一次性处理一个分区的数据，那么对于每个分区来说，只要创建一个数据库连接
+        即可，然后执行批量插入操作。
+
+        实践中发现，对于1万条左右的数据量写MySQL，性能可以提升30%以上。
+
+        4) 使用filter之后进行coalesce操作
+
+        通常对一个rdd执行filter算子过滤了较多的数据后，建议使用coalesce操作，手动减少分区
+        数量，将rdd中的数据压缩到更少的partition中。
+        因为filter之后，rdd的每个partition中都有很多数据被过滤掉，按此来计算，每个task处理的
+        partition中的数据量并不是很多，有点资源浪费，而且此时处理的task越多，速度反而比较慢。
+
+        用coalesce减少partition数量，将RDD中的数据压缩到更少的partition之后，只要使用更少的task
+        即可处理完所有的partition。在某些场景下，对于性能的提升会有一定的帮助。用100个task可以处理
+        完的作业，不需要用1000个task来处理。
+
+        5) 使用repartitionAndSortWithinPartitions代替repartiton和sort
+        spark官方推荐的一个算子。一边进行重分区的shuffle操作，一边排序，比先shuffle再排序，
+        性能可能要高
+
+    原则7、广播大变量
+
+        算子使用外部变量时，默认情况，spark会将变量复制多个副本，通过网络传输到task中，此时
+        每个task都有一个变量副本。如果变量本身比较大的话，变量在网络中的传输以及在各个节点
+        的executor上占用过多内存导致的GC，都会极大的影响性能。
+
+        鉴于上述情况，如果使用的外部变量比较大，建议用spark的广播功能，对变量进行广播。
+        广播后的变量，会保证每个Executor中，只会驻留一份变量副本，而Executor的task执行时共享
+        该Executor中的那份变量副本，这样就大大减少了变量副本的数量，从而减少了网络传输的性能开销
+        并减少Executor中内存的占用开销，降低gc频率
+
+        广播大变量的代码示例 见 原则4、尽量避免使用shuffle类算子
+
+    原则8、使用kryo优化序列化性能
+
+        spark中主要3个地方涉及序列化：
+            a、算子函数中用到外部变量时，该变量会被序列化后进行网络传输(原则7)
+            b、将自定义类作为rdd的泛型类型(Student等)，所有自定义类对象都会进行序列化。
+            此种情况，自定义类必须实现serializable接口
+            c、使用可持久化的策略(比如MEMORY_ONLY_SER)时，spark将rdd每个分区的都序列化成一个大的字节数组
+
+        对于上3种出现序列化的地方，都可以使用Kryo序列化类库来优化。spark默认使用的是java序列化机制，
+        ObjectOutputStream/ObjectInputStream API来进行序列化和反序列化。
+        但spark同时支持使用Kryo序列化库。Kryo序列化类库的性能比Java序列化类库的性能要高很多。
+        官方介绍，Kryo序列化机制比Java序列化机制，性能高10倍左右。
+
+        spark之所以默认没有使用Kryo作为序列化库，，因为Kryo要求最好要注册所有需要进行序列化的
+        自定义类型，对开发者来说比较麻烦。
+
+        使用Kryo代码示例
+
+            //创建sparkConf对象
+            val conf = new SparkConf().setMaster(...).setAppName(...)
+            //设置序列化器为KryoSerializer
+            conf.set("spark.serializer","org.apache.spark.serializer.KryoSerializer")
+            //注册要序列化的自定义类型
+            conf.registerkryoClasses(Array(classOf[Myclass1],classOf[Myclass2]))
+
+    原则9、优化数据结构
+
+        java中3中数据类型比较耗费性能：a、对象 b、字符串 c、集合(HashMap\LinkedList)
+
+        在代码可以更好维护的情况下，尽量使用字符串代替对象，使用原始类型(Int\Long)代替
+        字符串，使用数组代替集合类型，尽可能的减少内存占用，从而降低gc频率
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
