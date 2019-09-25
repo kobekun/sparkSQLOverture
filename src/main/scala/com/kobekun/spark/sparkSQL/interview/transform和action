@@ -1,0 +1,99 @@
+
+
+spark运算操作有二：transform和action
+
+transform --> 转换操作，返回类型是rdd，延时触发
+action --> 具体行为，返回值非rdd，可以一个object，或者是一个数值，也可以为Unit
+代表无返回值，并且action会立即触发job的执行。
+
+Transformation有哪些？
+
+map
+filter
+flatMap
+mapPartitions
+mapPartitionsWithIndex
+sample
+union
+intersection
+distinct
+groupByKey
+reduceByKey
+aggregateByKey
+sortByKey
+join
+cogroup
+cartesian
+pipe
+coalesce
+repartition
+repartitionAndSortWithinPartitions
+
+action有哪些？
+
+reduce
+collect
+count
+first
+take
+takeSample
+takeOrdered
+saveAsTextFile
+saveAsSequenceFile
+saveAsObjectFile
+countByKey
+foreach
+foreachPartition  返回值为空
+
+
+foreachPartition -->
+
+val sparkConf=new SparkConf()
+     val sc=new SparkContext(sparkConf)
+      sparkConf.setAppName("spark demo example ")
+    val rdd=sc.parallelize(Seq(1,2,3,4,5),3)
+
+    rdd.foreachPartition(partiton=>{
+      // partiton.size 不能执行这个方法，否则下面的foreach方法里面会没有数据，
+      //因为iterator只能被执行一次
+      partiton.foreach(line=>{
+        //save(line)  落地数据
+      })
+
+    })
+
+    sc.stop()
+
+mapPartitions -->
+
+
+val sparkConf=new SparkConf()
+     val sc=new SparkContext(sparkConf)
+      sparkConf.setAppName("spark demo example ")
+    val rdd=sc.parallelize(Seq(1,2,3,4,5),3)
+
+    rdd.mapPartitions(partiton=>{
+      //只能用map，不能用foreach，因为foreach没有返回值
+      partiton.map(line=>{
+        //save line
+      }
+      )
+    })
+
+    rdd.count()//需要action，来触发执行
+    sc.stop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
