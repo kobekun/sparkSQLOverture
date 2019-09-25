@@ -1,0 +1,52 @@
+
+
+1、小表对大表(broadcast join)
+
+    将小表的数据分发到每个节点上，供大表使用。executor存储小表的全部数据，一定程度上牺牲
+    了空间，换取shuffle操作大量的耗时，
+
+    Broadcast Join的条件有以下几个：
+
+    *被广播的表需要小于 spark.sql.autoBroadcastJoinThreshold 所配置的值，默认是10M
+    （或者加了broadcast join的hint）
+
+    *基表不能被广播，比如 left outer join 时，只能广播右表
+
+
+2、Shuffle Hash Join
+
+    Shuffle Hash Join分为两步：
+
+    对两张表分别按照join keys进行重分区，即shuffle，目的是为了让有相同join keys值的
+    记录分到对应的分区中
+
+    对对应分区中的数据进行join，此处先将小表分区构造为一张hash表，然后根据大表分区中
+    记录的join keys值拿出来进行匹配
+
+    Shuffle Hash Join的条件有以下几个：
+
+    分区的平均大小不超过spark.sql.autoBroadcastJoinThreshold所配置的值，默认是10M
+
+    基表不能被广播，比如left outer join时，只能广播右表
+
+    一侧的表要明显小于另外一侧，小的一侧将被广播（明显小于的定义为3倍小，此处为经验值）
+
+3、大表对大表(sort merge join)
+
+    将两张表按照join keys进行了重新shuffle，保证join keys值相同的记录会被分在相应的分
+    区。分区后对每个分区内的数据进行排序，排序后再对相应的分区内的记录进行连接
+
+    因为两个序列都是有序的，从头遍历，碰到key相同的就输出；如果不同，左边小就继续取左边，
+    反之取右边(即用即取即丢)
+
+
+
+
+
+
+
+
+
+
+
+
