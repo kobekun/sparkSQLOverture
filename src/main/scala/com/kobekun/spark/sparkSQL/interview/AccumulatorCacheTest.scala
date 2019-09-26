@@ -45,3 +45,12 @@ object AccumulatorCacheTest {
     println(accum.value)
   }
 }
+
+//spark累加器Accumulator是spark提共的两种共享变量（广播变理和累加器）的一种。为什么要使
+//用共享变量呢？通常情况下，当向Spark操作(如map,reduce)传递一个函数时，它会在一个远程集
+//群节点上执行，它会使用函数中所有变量的副本。这些变量被复制到所有的机器上，远程机器上并没有
+//被更新的变量会向驱动程序回传，也就是说有结果Driver程序是拿不到的！
+//共享变量就是为了解决这个问题。解决共享变量，让driver程序拿到变量值，回传给整个程序
+
+//累加器只能够增加。 只有driver能获取到Accumulator的值（使用value方法） ，Task（excutor）
+//只能对其做增加操作（使用 +=）。
