@@ -1,0 +1,24 @@
+
+kafka出现消息堆积怎么办?
+
+    关注几个参数：
+        session.timeout.ms
+        max.poll.records  消费者一次poll多少个记录  不能设置太大
+            max.poll.records默认是2147483647 (0.10.0.1版本)
+            max.poll.records默认是500 (0.10.2.1)
+        max.poll.interval.ms  默认(300s，0.10.2.1) kafka消费者在一次poll内，
+        业务处理时间不能超过这个时间。该时间设置要综合业务处理时间和每次poll的数据数量。
+
+    业务改成多线程消费
+
+    Java线程池大小的选择，
+
+    对于CPU密集型应用，也就是计算密集型，线程池大小应该设置为CPU核数+1；
+
+    对于IO密集型应用 ，线程池大小设置为    2*CPU核数+1.
+
+
+
+
+
+
