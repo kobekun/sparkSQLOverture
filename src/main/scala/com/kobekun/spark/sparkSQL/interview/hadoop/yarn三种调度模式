@@ -1,0 +1,15 @@
+
+https://blog.csdn.net/u014236468/article/details/81510416
+
+yarn三种调度模式：FIFO Scheduler ，Capacity Scheduler，FairS cheduler。
+    1、FIFO 按提交的顺序排成一个先进先出队列，不合适共享集群
+    2、Capacity 有专门的队列运行小任务，大任务的执行时间会落后于小任务
+    3、fairs  为运行的任务动态的分配资源，当第一个大job提交时，只有这一个job在运行，此时它获得了所有集群资源；
+    当第二个小任务提交后，Fair调度器会分配一半资源给这个小任务
+
+调度器的使用是通过yarn-site.xml配置文件中的yarn.resourcemanager.scheduler.class
+参数进行配置FairScheduler类的全限定名： org.apache.hadoop.yarn.server.resourcemanager.
+scheduler.fair.FairScheduler。
+
+Fair调度器的配置文件位于类路径下的fair-scheduler.xml文件中
+
