@@ -1,0 +1,24 @@
+
+
+rowkey设计：
+
+    1、加盐  rowkey前增加随机数
+    2、hash
+    3、反转
+
+加盐+(表中几个字段)crc32 + 时间戳反转(快速获取数据的最近版本)
+
+
+反转rowkey的例子：以手机号为rowkey，可以将手机号反转后的字符串作为rowkey，
+从而避免诸如139、158之类的固定号码开头导致的热点问题。
+
+
+热点问题：当大量的client访问hbase集群的一个或少数几个节点，
+造成少数region server的读/写请求过多、负载过大
+
+热点产生原因：
+
+有大量连续编号的row key  ==>  大量row key相近的记录集中在个别region
+ ==>  client检索记录时,对个别region访问过多  ==>  此region所在的主机过载
+
+https://blog.csdn.net/qq_31598113/article/details/71278857
