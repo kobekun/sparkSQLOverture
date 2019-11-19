@@ -1,0 +1,14 @@
+
+
+coalesce和repartition的区别：
+    repartition是coalesce的shuffle为true的实现，增加分区数
+    coalesce是减少分区数使用，一般在输出结果中使用报存
+
+
+
+
+
+
+
+
+
