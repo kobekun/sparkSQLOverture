@@ -1,0 +1,11 @@
+
+spark怎么分区
+    1、HashPartitioner  partition=key的hash % numPartitions
+    2、RangePartitioner 对key进行排序，然后key值划分成3份key值集合
+    3、自定义分区 extends Partitioner
+
+
+
+
+
+
