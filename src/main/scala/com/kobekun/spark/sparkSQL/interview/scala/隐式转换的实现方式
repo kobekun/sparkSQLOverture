@@ -1,0 +1,63 @@
+
+隐式转换实现方式
+
+方式一：通过伴生对象实现
+
+//这个普通人
+class Man(val name : String)
+
+object Man{
+  //普通人想体验超人的功能，在普通人的伴生对象中定义一个隐式转换的方法进行转换
+  //a1 这个名字也可以起其他的
+  implicit def a1(man:Man) = new SuperMan(man.name)
+}
+
+//这是超人
+class SuperMan(val name : String){
+  def makeMiracles = println(this.name+"WOW WOw,i am superman")
+}
+
+object HelloImplicit1 {
+  def main(args: Array[String]): Unit = {
+    val man = new Man("Scala")
+    man.makeMiracles
+  }
+}
+
+方式二：写一个专门的类用于转换，需要手动导入方式
+
+//这个普通人
+class Man (val name : String)
+
+//这是超人
+class SuperMan(val name:String){
+  def makeMiracles = println(this.name+"WOW WOw,i am superman")
+}
+
+//写一个专门的类来转换
+object Myimplicits{
+  implicit def man2SuperMan(man:Man) = new SuperMan(man.name)
+}
+
+object HelloImplicit2 {
+  def main(args: Array[String]): Unit = {
+    //导入上面定义的转换类
+    import implicittest.Myimplicits._
+    val man = new Man("Scala")
+    man.makeMiracles
+  }
+}
+
+目标类中有源类没有的方法，通过将源类实例传参，返回目标类的实例
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,21 @@
+
+
+case class和class的区别
+
+1、case class创建实例不用new，class必须new
+2、case class默认实现了序列化类
+3、case class支持模式匹配
+
+
+
+
+
+
+
+
+
+
+
+
+
+
