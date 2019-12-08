@@ -1,0 +1,14 @@
+
+pid文件一般在/tmp目录下
+
+需要配置目录到hadoop和yarn的环境变量脚本中
+
+hadoop-env.sh
+export HADOOP_PID_DIR=/home/ruoze/tmp
+
+yarn-env.sh
+export YARN_PID_DIR=/home/ruoze/tmp
+
+
+
+
