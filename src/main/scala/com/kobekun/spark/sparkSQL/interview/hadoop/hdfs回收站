@@ -1,0 +1,17 @@
+
+cdh默认开启回收站
+
+hdfs dfs -put /laji.log  回收站 保留7天自动删除
+
+
+fs.trash.interval 10080 7天
+
+开启回收站，慎用 skipTrash
+hdfs dfs -put -skipTrash /rz.log
+
+
+
+
+
+
+
