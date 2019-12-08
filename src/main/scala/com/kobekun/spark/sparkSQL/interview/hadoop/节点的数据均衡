@@ -36,4 +36,4 @@ b.监控服务器的磁盘剩余空间 小于阈值 10%，发邮件预警  手�
 
 
 
-
+dfs.datanode.balance.bandwidthPerSec 30m  带宽
