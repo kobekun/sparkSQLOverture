@@ -1,0 +1,39 @@
+
+threshold = 10.0
+90+60+80=230/3=76%
+所有节点的磁盘used与集群的平均used之差要小于这个阈值
+
+90-76=14
+60-76=16
+80-76=4
+如果大于阈值，进行数据均衡
+
+dfs.disk.balancer.enabled must be set to true in hdfs-site.xml.
+
+[ruoze@ruozedata001 sbin]$ ./start-balancer.sh -threshold 5
+
+自动调度
+crontab job 每天凌晨20分调度
+
+
+
+hdfs diskbalancer -plan ruozedata001                   生成ruozedata001.plan.json
+hdfs diskbalancer -execute ruozedata001.plan.json      执行
+hdfs diskbalancer -query ruozedata001                  查询状态
+
+
+为什么 DN的生产上挂载多个物理的磁盘目录？
+为了高效率写  高效率读
+一个磁盘一个目录
+/data01 disk1
+/data02 disk2
+/data03 disk3
+
+什么时候手动或调度执行？
+a.新盘加入
+b.监控服务器的磁盘剩余空间 小于阈值 10%，发邮件预警  手动执行
+
+
+
+
+
