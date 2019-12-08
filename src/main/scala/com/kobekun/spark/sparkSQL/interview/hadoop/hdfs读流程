@@ -1,0 +1,21 @@
+
+1、client调用fs的open方法，与nn进行rpc通信，返回FSDataInputStream对象
+2、client调用FSDataInputStream对象的read方法，
+    a,读第一个块最近的dn，进行读取，读完之后，会检查是否读取成功，如果成功，
+    关闭与当前dn的通信；如果失败，记录失败块和dn信息，下次不会读取。
+    b,然后去第二个块最近的dn上进行通信读取，check后，关闭通信。
+    c,block读取完成后，文件还没有结束，fs会和nn通信获取下一个批次的block列表
+
+3，client调用FSDataInputStream对象的close方法关闭流
+
+
+
+
+
+
+
+
+
+
+
+
