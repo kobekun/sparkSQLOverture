@@ -1,0 +1,17 @@
+
+
+
+hdfs dfsadmin -safemode enter
+安全模式：只对写有影响
+
+
+
+
+
+
+
+
+
+
+
+
