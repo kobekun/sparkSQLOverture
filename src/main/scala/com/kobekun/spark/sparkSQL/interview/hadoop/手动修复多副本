@@ -1,0 +1,22 @@
+手动修复副本：
+hdfs debug recoverLease -path xxx -retries 10
+
+自动修复副本：
+当数据块损坏后，DN节点执行directoryscan操作之前，都不会发现损坏；
+也就是directoryscan操作是间隔6h
+dfs.datanode.directoryscan.interval : 21600
+
+在DN向NN进行blockreport前，都不会恢复数据块;
+也就是blockreport操作是间隔6h
+dfs.blockreport.intervalMsec : 21600000
+
+当NN收到blockreport才会进行恢复操作。******
+
+
+生产上本人一般倾向于使用 手动修复方式，但是前提要手动删除损坏的block块。
+
+切记，是删除损坏block文件和meta文件，而不是删除hdfs文件。
+切记删除不要执行: hdfs fsck / -delete 这是删除损坏的文件
+
+
+
