@@ -20,3 +20,9 @@ dfs.blockreport.intervalMsec : 21600000
 
 
 
+
+自动、手动都可能失败
+数据质量  数据重刷机制
+
+
+
