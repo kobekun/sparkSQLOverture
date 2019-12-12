@@ -1,0 +1,26 @@
+
+
+SNN
+存储：fsimage和editlog文件
+作用：定期合并fsimage和editlog文件作为新的fsimage，推送给nn，简称checkpoint，检查点
+
+为了解决单点故障，只有nn，后来加入snn角色 1小时的备份机制
+虽然能够减轻单点故障，但是还是会有风险，40分钟元数据恢复不了(3点40 nn故障)
+
+
+dfs.namenode.checkpoint.period	3600s
+
+
+需要hdfs ha高可用的部署
+
+nn  nn  实时同步
+snn 不要
+
+
+
+
+
+
+
+
+
