@@ -1,0 +1,24 @@
+
+create table emp_dynamic_partition(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+sal double,
+comm double)
+PARTITIONED BY(deptno int)row format delimited fields terminated by '\t';
+
+动态分区表与静态分区表的创建，在语法上是没有任何区别的
+
+【注意】分区的字段名称，写在最后，有几个就写几个 与静态分区相比，不需要where
+需要设置属性的值：
+
+hive>set hive.exec.dynamic.partition.mode=nonstrict;
+
+
+
+
+
+
+
