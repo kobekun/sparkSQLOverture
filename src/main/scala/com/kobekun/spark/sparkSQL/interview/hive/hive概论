@@ -1,0 +1,25 @@
+
+
+hive 由Facebook开源，构建在hadoop之上的数据仓库
+    Hive数据存储在HDFS上
+    Hive底层执行引擎是MapReduce/Tez/Spark
+        只需要通过一个参数就能够切换底层的执行引擎
+    Hive作业提交到YARN上运行
+
+提供了SQL查询语句
+    和SQL类似，但不完全相同 (除了长得像，其他都不一样)
+
+SQL on hadoop： Hive/Presto/Impala/Spark SQL
+
+Hive优缺点
+     优点：SQL
+     缺点：如果底层基于MR引擎，性能不高
+
+
+Hive的数据分两部分：数据(HDFS)和元数据(MySQL)
+
+MySQL 配置HA
+
+
+
+
