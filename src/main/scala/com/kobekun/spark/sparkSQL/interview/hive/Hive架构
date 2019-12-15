@@ -1,0 +1,22 @@
+
+
+1、用户接口层：命令/JDBC
+2、Driver
+    SQL解析：SQL => AST
+    查询优化：逻辑/物理执行计划
+    UDF、SerDes:
+    Execution: 执行
+
+3、元数据
+    表名，所属数据库，列(名，类型，index)，表类型，表的存储地方
+
+
+    hive和RDBMS对比
+        相同点
+            SQL
+            支持事务，用的很少
+            insert、update、delete (hive-0.14版本后支持)
+        不同点
+            数据量上-->hive查询数据量比较大
+            延迟性-->RDBMS时效性要好
+
