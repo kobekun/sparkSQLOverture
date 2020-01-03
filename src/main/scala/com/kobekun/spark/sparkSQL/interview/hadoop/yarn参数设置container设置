@@ -1,0 +1,18 @@
+1.4 假如 256G内存 56core，请问参数如何设置1.5 假如该节点还有组件，比如hbase regionserver进程，那么该如何设置？hbase regionserver = 30G102-2-4-30=66G
+
+1.4 
+依据pcores:vcores=1:2，一个container设置4个vcores，以memory为主
+
+0.2*256=52G
+256-52-2-4=198G
+yarn.nodemanager.resource.memory-mb 198G
+yarn.scheduler.minimum-allocation-mb1G
+yarn.scheduler.maximum-allocation-mb198G
+container 数量是1-198，
+通过下面vcores 算出来的极限container是28，此处Max设置198/28=8G
+
+56*2=112vcores
+
+yarn.nodemanager.resource.cpu-vcores        112   yarn.scheduler.minimum-allocation-vcores	1
+yarn.scheduler.maximum-allocation-vcores 4
+极限的话112/4=28containers
