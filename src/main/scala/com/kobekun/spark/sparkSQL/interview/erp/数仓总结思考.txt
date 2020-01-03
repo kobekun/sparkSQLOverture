@@ -1,0 +1,92 @@
+总结 优化点
+
+A、思考优化点
+1、外部表
+external
+
+2、存储格式
+选择orc
+
+3、压缩格式
+选择snappy
+
+4、故障恢复
+故障规避：
+	切记hdfs开启回收站
+	切记不要执行hdfs dfs -rm -r /user
+	hdfs  ha  高可靠  namenode1 namenode2  没有snn
+	yarn ha 高可靠
+	hive meta 定期全备份(重要的数据) ==》scp到另一台  raid(磁盘阵列)  磁盘备份
+	
+	补充：大数据集群环境磁盘不做raid，原因：hdfs有副本机制
+	
+故障恢复：
+	主要是数据同步，ODS--》DWD层，紧跟着重新计算DWS ADS层指标数据
+	ods_init.sh  xxxxx
+	dwd_init.sh  xxxxx
+
+5、数据质量(最后执行)
+正常来说，只比对mysql <--> DWD层   按年份、月份等来比对，看count
+因为有可能sqoop没有error，但是数据有问题
+
+6、预警
+采集主题：
+hadoop mysql superset rundeck 进程服务状态&运行日志 监控
+sqoop job 主从复制的同步时间 是否有延迟，假如有延迟  比如现在21号1点，但是从库还是20号10点的数据，
+延迟3个小时，这个抽取有意义吗？ 0
+sqoop job的log日志
+sqoop job执行时间的统计，平均值的1.5倍，超过就预警
+
+预警方式：
+邮件
+企业微信号
+钉钉
+电话
+
+
+B、总结
+数据仓库、数据分层、维度建模、分层流转
+分层实现、拉链设计、定时抽取定义可视
+
+C、升级数仓
+kylin  空间换时间
+多维度的最小计算粒度
+
+kylin多维分析
+hbase天然实时读写
+superset可视化
+AdHoc即席查询
+支持spring boot构建rest service
+
+D、展望实时数仓
+mysql --》Maxwell--》kafka--》sparkStreaming+phoenix--》hbase+es
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

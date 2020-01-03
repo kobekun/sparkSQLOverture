@@ -1,0 +1,286 @@
+
+1、业务表补updatetime
+
+建表规范
+createtime
+updatetime
+
+mysql业务表 由于开发人员水平不齐，未加updatetime字段
+
+mysql 									--》hive
+		createtime
+1 100 2019-12-10 10:00:00   			1 100 2019-12-10 10:00:00 	12月11号凌晨一点，sqoop根据createtime字段只抽取10号整天数据
+(select * from t where createtime >= '2019-12-10 00:00:00' and createtime<'2019-12-11 00:00:00')
+
+变更  12-11 13:05:00 变更数据 100为200
+1 200 2019-12-10 10:00:00				1 200 12-11 13:05:00
+12月12号凌晨一点，sqoop根据createtime字段，抽取11号整天数据
+(select * from t where createtime >= '2019-12-11 00:00:00' and createtime<'2019-12-12 00:00:00')
+
+T+1模式 一天卡一天
+
+updatetime字段：不会影响业务，数据库自己做，不需要上游代码  sql任何变更
+
+alter table xxx
+add column updatetime timestamp not null default current_timestamp 
+on update current_timestamp
+
+1 100 2019-12-10 10:00:00   			1 100 2019-12-10 10:00:00 
+1 200 2019-12-10 10:00:00				1 200 2019-12-11 13:05:00
+select * from t where updatetime >= '2019-12-11 00:00:00' and updatetime<'2019-12-12 00:00:00'
+
+所以要使用updatetime字段来抽取
+but：	1、QA环境  不上生产：主 第一层mysql修改  开发废话
+		2、mysql单节点   主 写 --》mysql 从节点 读--》mysql从从节点+updatetime
+			https://www.bilibili.com/video/av40832418
+		3、createtime 每天先把hive删除干净  每次全量 从mysql --》hive拉取过来
+		4、binlog  --> canal、Maxwell--》kafka--》flume--》hive/hdfs	伪实时
+														--》spark/flink --》hbase实时
+		
+删除怎么办？
+delete from t where id=100;  物理删除		hive该怎么删除？
+update t set delflag=1 where id=100;	逻辑删除		
+		
+2、数据建模
+其实就是建结构  如果上游表在设计时很规范(主表 明细表 商品表 供应商表 商品类别表)
+下游很轻松
+
+fact表：事实产生的 比如订单表
+dim维表：时间维表(数据不变化) 供应商商家维表 仓库维表(缓慢变化)
+
+维度建模：
+	1、星型模型  一般都用此模型
+	
+	一个fact事实表 多个dim维表
+	额外：变态版星型模型(head事实表+item表 --> fact_depotitems)
+	
+	是不符合3NF设计，反规范化，不存在渐变维度，数据是有冗余的
+	比如地域表，存在：
+	中国	江苏	仪征	月塘
+	中国	江苏	仪征	谢集
+	
+	中国	江苏	仪征 分别存储了两次，是冗余的，以存储空间为代价，降低维度表连接数，提高性能
+	
+
+	
+	商品名称		第一类别	第二类别
+	A果				新鲜水果	热带水果
+	B果				新鲜水果	热带水果
+	
+	降维：商品+商品类别表 --》商品表  没有用
+	
+	2、雪花模型
+	一个fact事实表 多个dim维表
+	是星型模型的扩展，不同的是维度表被规范化，进一步分解到附加表里
+	符合3NF设计，规范化，有效降低数据冗余，但是性能差，复杂，并行度低
+	
+	商品名称		类别ID
+	A果				25
+	B果				25
+	
+	t1 join t2   两张表是一张  子父表
+	类别ID			名称		父Id
+	25				热带鲜果	18
+	25				热带鲜果	18
+	18				新鲜水果	-1
+	18				新鲜水果	-1
+	
+	3、星座模型
+	是星型模型延伸的，基于多个事实表，而且共享维度信息	
+
+	参考星型模型，但是性能差：
+	多个事实表，共享维度表，业务复杂，开发复杂，性能不高
+
+				T+1
+	ERP/mysql --------》hive DW ----------》mysql---------》superset	
+				sqoop	ods层		sqoop	ads存储	
+						dwd层					|
+						dws层					|	
+						ads层--------------------
+					   13个指标
+3、架构
+	存储多维度的最小存储粒度
+		
+4、数仓分层图	
+
+		
+	下图是标准分层
+	
+			ERP ------------------》ODS  初始化全量表+按天分区增量表
+		先调研						|
+		搞清楚表字段				|-------|假设：ods商品表+ods商品类别表 --》dwd_sku(降维  2dim变1dim)
+		业务逻辑					|	    |但是不用，原因是性能提高不了多少
+		指标需求					|	    |
+						(明细)dwd事实表	dwd维度dim表		清洗后，拉链表(含有DML语句，保留多条，end_day=9999-99-99
+														标识最新有效1条)
+									|		|
+									|		| join+(group)
+									|		|
+									|--------\	
+									|			\
+								dws轻度分层  聚合事实表，事实大宽表，数据的预关联、预汇总、依赖对应用的共性提炼  
+									|				\
+									|group			/
+									|			/一般是dws层没有指标的字段，需要关联dim表 join	
+									|		/
+									|	/
+									|
+									ADS 按需求定制主题表，面向应用
+		
+	ERP mysql ：一串sql  join group by
+	hive : join --》group by
+	
+	评估 上游的现在总数据量多少G，评估一年增长多少(一条数据多少KB*条数)   1G*100=100g * 3倍=300g
+	
+	1T
+	==> 9T
+	
+	10T  还剩1T
+		
+5、ODS层---》DWD层		
+		
+	mysql表的创建和hive表的创建  mysql和hive建表有什么不同
+	1、去除`
+	2、去除主键 不为空等约束
+	3、去除字符集 执行引擎
+	4、COMMENT='单据主表'  ==》 =去除
+	5、mysql的字段类型转换为hive字段类型 
+		bigint(20) ==> bigint
+		char/varchar ==> string
+		datetime ==> timestamp
+		int(10) ==> int
+		
+		decimal(24,6)不变
+		
+	MySQL: ruozedata_depothead
+	ODS: ods_ruozedata_depothead  普通的内部表   全量
+     ods_ruozedata_depothead_update 普通的内部分区表 按天增量
+	DWD: dwd_ruozedata_depothead  普通的内部表   拉链表	
+		
+	A时间点:2019-12-29 09:55
+		select * from ruozedata_depothead where updatetime<'2019-12-29 00:00:00'
+		ruozedata_depothead --> ods_ruozedata_depothead  将29号之前的所有历史数据抽到 这张ods初始全量表
+		执行shell脚本: ./ods_init.sh ruozedata_depothead	
+			
+	B时间点:2019-12-29 10:03
+		ods_ruozedata_depothead数据 初始化导入到 dwd_ruozedata_depothead
+
+		insert overwrite table dwd_ruozedata_depothead
+		SELECT 
+		*,
+		'2019-12-28' as startday, 
+		'9999-99-99' as endday 
+		from ods_ruozedata_depothead;
+
+		执行shell脚本: ./dwd_init.sh ruozedata_depothead	
+			
+C时间点：2019-12-29 10:11		deleteflag 逻辑删除
+		ERP业务操作
+		新增2条：248 249
+		修改1条：247
+		
+(假设)D时间点：2019-12-30 01:00:00	 做ods增量脚本调度  定时	
+		
+		ods_ruozedata_depothead_update 2019-12-29 分区存储29号数据
+		
+		select * from ruozedata_depothead 
+		where updatetime>='2019-12-29 00:00:00' 
+		and updatetime<'2019-12-30 00:00:00'
+		执行shell脚本: ./ods_update.sh  ruozedata_depothead
+		
+(假设)D时间点：2019-12-30 02:00:00	 做dwd拉链表
+		
+		insert overwrite table ${HIVE_DATABASENAME}.${HIVE_DWD_TABLENAME}
+	    select
+	    a.id, a.type, a.subtype, a.projectid, a.defaultnumber, a.number,
+		a.operpersonname, a.createtime, a.opertime, a.organid, a.handspersonid, a.accountid, a.changeamount,
+		a.allocationprojectid, a.totalprice, a.paytype, a.remark, a.salesman, a.accountidlist, a.accountmoneylist,
+		a.discount, a.discountmoney, a.discountlastmoney, a.othermoney, a.othermoneylist, a.othermoneyitem,
+		a.accountday, a.status, a.linknumber, a.tenant_id, a.delete_flag, a.updatetime,
+
+		a.startday,
+		case
+		    when a.endday = '9999-99-99' and b.id is not null then '2019-12-29'
+	    else a.endday
+		end as endday
+		from dwd_ruozedata_depothead as a
+		left outer join (select * from ods_ruozedata_depothead_update where updateday='2019-12-29') as b
+		on b.id = a.id
+
+		union all
+
+		select
+		id, type, subtype, projectid, defaultnumber, number,
+		operpersonname, createtime, opertime, organid, handspersonid, accountid, changeamount,
+		allocationprojectid, totalprice, paytype, remark, salesman, accountidlist, accountmoneylist,
+		discount, discountmoney, discountlastmoney, othermoney, othermoneylist, othermoneyitem,
+		accountday, status, linknumber, tenant_id, delete_flag, updatetime,
+		'2019-12-29' as startday, '9999-99-99' as endday
+
+		 from ods_ruozedata_depothead_update  where updateday='2019-12-29';
+
+		执行shell脚本: ./dwd_update.sh  ruozedata_depothead
+		因为数据源是DML语句，要把update记录维护好 之前的数据也记录起来
+		为了保存历史的一些状态，需要用拉链表来记录数据，startday标识数据的生命开始，
+		endday标识数据的生命结束：
+			2019-12-29 结束
+			9999-99-99 最新有效数据
+		
+		分区增量:
+		29分区 insert
+		30分区 update1
+		31分区 update2
+		数据是最新有效
+		按表分组，按updatetime排序 desc，取最新的1条 ==>31分区
+
+		分区全量:
+		29分区 insert
+		30分区 insert update1
+		31分区 insert update1 update2  有效分区==》拉链表 
+		
+		拉链表取数据逻辑：
+		select * from t where endday='9999-99-99';
+		
+		好处：节省存储空间  满足业务需求  计算简单
+		
+		
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+
+
+
+
+
+
