@@ -1,0 +1,11 @@
+一般来说，原始数据如果有换行符，在抽取数据的时候，该条记录可能会有问题
+
+mysql中将换行符替换
+
+select Id, Name, CategoryLevel, ParentId, sort, status, serial_no, 
+replace(replace(remark,char(10),''),char(13),'') as remark, create_time, creator, update_time, updater, tenant_id, UpdateTime
+ from ruozedata_materialcategory where updatetime<'2019-12-29 00:00:00';
+ 
+ MySQL 去除字段中的换行char(10)和回车符char(13), 10,13代表换行，回车的ASCII值
+ 
+ SQL脚本跑的时候OK，数据不一定OK
